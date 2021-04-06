@@ -1,13 +1,7 @@
-/*
- * ws protocol handler plugin for "lws-minimal-server-echo"
- *
- * Written in 2010-2019 by Andy Green <andy@warmcat.com>
- *
- * This file is made available under the Creative Commons CC0 1.0
- * Universal Public Domain Dedication.
- *
- * The protocol shows how to send and receive bulk messages over a ws connection
- * that optionally may have the permessage-deflate extension negotiated on it.
+/**
+ * @file ws_server_dsp.c
+ * @brief WS protocol handler plugin for 'lws-fs-dsp'
+ * @details Parse out websocket message and hand it of to fs-dsp subprotocol.
  */
 
 #if !defined (LWS_PLUGIN_STATIC)
@@ -17,8 +11,8 @@
 #endif
 
 #include <string.h>
-#include "include/fs_ws_signal.h"
-#include "fs_ws_signal.c"
+#include "include/fs_ws_dsp.h"
+#include "fs_ws_dsp.c"
 
 #define RING_DEPTH 4096
 
@@ -186,10 +180,10 @@ static int callback_minimal_server_echo(
 		}
 
 		/* fs-ws-signal */
-		struct fs_ws_signal_request s_request = fs_ws_signal_parse_request(in, len);
-		struct fs_ws_signal_response s_response = fs_ws_signal_process(s_request);
-		len = fs_ws_signal_get_response_size(s_response);
-		char *stream = fs_ws_signal_serialize_response(s_response);
+		struct fs_ws_dsp_request s_request = fs_ws_dsp_parse_request(in, len);
+		struct fs_ws_dsp_response s_response = fs_ws_dsp_process(s_request);
+		len = fs_ws_dsp_get_response_size(s_response);
+		char *stream = fs_ws_dsp_serialize_response(s_response);
 		/* -- */
 
 		response.first = (char)lws_is_first_fragment(wsi);
@@ -223,8 +217,8 @@ static int callback_minimal_server_echo(
 
 		/* fs_ws_signal */
 		free(stream);
-		fs_ws_signal_free_response(s_response);
-		fs_ws_signal_free_request(s_request);
+		fs_ws_dsp_free_response(s_response);
+		fs_ws_dsp_free_request(s_request);
 		/* -- */
 
 		lws_callback_on_writable(wsi);

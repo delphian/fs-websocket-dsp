@@ -5,7 +5,7 @@
 #include <signal.h>
 
 #define LWS_PLUGIN_STATIC
-#include "server_signal.c"
+#include "ws_server_dsp.c"
 
 
 int interpolator() {
