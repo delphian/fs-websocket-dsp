@@ -1,1 +1,6 @@
-rm -Rf build && mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && cd ..
+rm -Rf build
+mkdir build
+cd build &&
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+make
+cd ..

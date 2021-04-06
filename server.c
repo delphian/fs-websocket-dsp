@@ -3,12 +3,9 @@
 #include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
-#include <complex.h>
-#include <liquid/liquid.h>
 
 #define LWS_PLUGIN_STATIC
-#include "protocol_echo.c"
-
+#include "server_signal.c"
 
 
 int interpolator() {
