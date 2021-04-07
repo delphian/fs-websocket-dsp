@@ -10,7 +10,7 @@
   "author": "Bryan Hazelbaker",
   "license": "MIT",
   "dependencies": {
+    "atob": "^2.1.2"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }

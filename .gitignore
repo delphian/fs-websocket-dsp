@@ -59,3 +59,5 @@ CMakeCache.txt
 build
 wssignal
 .vscode
+**/node_modules/
+package-lock.json
