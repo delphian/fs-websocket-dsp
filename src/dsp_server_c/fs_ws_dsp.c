@@ -12,10 +12,7 @@ struct fs_ws_dsp_response fs_ws_dsp_process(struct fs_ws_dsp_request request) {
     response._version = 1;
     response.id = request.id;
     response.data = malloc(data_len);
-    response.data[0] = 'a';
-    response.data[1] = 'b';
-    response.data[2] = 'c';
-    response.data[3] = 'd';
+    *(uint32_t *)response.data = request.data_len;
     response.data_len = data_len;
     return response;
 }
@@ -27,8 +24,8 @@ void fs_ws_dsp_free_response(struct fs_ws_dsp_response response) {
 }
 struct fs_ws_dsp_request fs_ws_dsp_parse_request(char *data, size_t data_len) {
     struct fs_ws_dsp_request request;
-    request._version = 1;
-    request.id = 257;
+    request._version = (uint8_t)data[0];
+    request.id = *(uint32_t *)&data[1];
     request.data = NULL;
     request.data_len = 0;
     return request;
