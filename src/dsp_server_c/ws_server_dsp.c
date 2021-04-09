@@ -16,8 +16,7 @@
 
 #define RING_DEPTH 4096
 
-/* one of these created for each message */
-
+/* one of these created for each message fragment */
 struct msg {
 	void *payload; /* is malloc'd */
 	size_t len;
@@ -26,10 +25,12 @@ struct msg {
 	char final;
 };
 
-struct per_session_data__minimal_server_echo {
+struct session_data {
+	struct lws_ring *frag_ring;
+	uint32_t frag_tail;
 	struct lws_ring *ring;
-	uint32_t msglen;
 	uint32_t tail;
+	uint32_t msglen;
 	uint8_t completed:1;
 	uint8_t flow_controlled:1;
 	uint8_t write_consume_pending:1;
@@ -38,16 +39,13 @@ struct per_session_data__minimal_server_echo {
 struct vhd_minimal_server_echo {
 	struct lws_context *context;
 	struct lws_vhost *vhost;
-
 	int *interrupted;
 	int *options;
 };
 
-static void
-__minimal_destroy_message(void *_msg)
+static void __minimal_destroy_message(void *_msg)
 {
 	struct msg *msg = _msg;
-
 	free(msg->payload);
 	msg->payload = NULL;
 	msg->len = 0;
@@ -63,59 +61,53 @@ __minimal_destroy_message(void *_msg)
  * @param[in]	in		Incoming data from client.
  * @param[in]	len		Byte length of data.
  */
-static int callback_minimal_server_echo(
+static int callback_dsp(
 	struct lws *wsi, 
 	enum lws_callback_reasons reason,
 	void *user, 
 	void *in, 
 	size_t len)
 {
-	/* Session pointer */
-	struct per_session_data__minimal_server_echo *session =
-			(struct per_session_data__minimal_server_echo *)user;
+	struct session_data *session = (struct session_data *) user;
 	/* Virtual host pointer */
 	struct vhd_minimal_server_echo *vhost = 
 			(struct vhd_minimal_server_echo *)
 			lws_protocol_vh_priv_get(lws_get_vhost(wsi), lws_get_protocol(wsi));
 	const struct msg *request; /* Client message */
 	struct msg response; 	/* Resposne message */
-	int m, n, flags;
+	struct msg fragment;
+	int m, ring_capacity, flags;
 
 	switch (reason) {
 
 	case LWS_CALLBACK_PROTOCOL_INIT:
-		vhost = lws_protocol_vh_priv_zalloc(lws_get_vhost(wsi),
-				lws_get_protocol(wsi),
-				sizeof(struct vhd_minimal_server_echo));
+		vhost = lws_protocol_vh_priv_zalloc(lws_get_vhost(wsi), lws_get_protocol(wsi), sizeof(struct vhd_minimal_server_echo));
 		if (!vhost)
 			return -1;
-
 		vhost->context = lws_get_context(wsi);
 		vhost->vhost = lws_get_vhost(wsi);
-
 		/* get the pointers we were passed in pvo */
-
-		vhost->interrupted = (int *)lws_pvo_search(
-			(const struct lws_protocol_vhost_options *)in,
-			"interrupted")->value;
-		vhost->options = (int *)lws_pvo_search(
-			(const struct lws_protocol_vhost_options *)in,
-			"options")->value;
+		vhost->interrupted = (int *)lws_pvo_search((const struct lws_protocol_vhost_options *)in, "interrupted")->value;
+		vhost->options = (int *)lws_pvo_search((const struct lws_protocol_vhost_options *)in, "options")->value;
 		break;
 
 	case LWS_CALLBACK_ESTABLISHED:
-		/* generate a block of output before travis times us out */
-		lwsl_warn("LWS_CALLBACK_ESTABLISHED\n");
-		session->ring = lws_ring_create(sizeof(struct msg), RING_DEPTH,
-					    __minimal_destroy_message);
-		if (!session->ring)
+//		lwsl_warn("LWS_CALLBACK_ESTABLISHED\n");
+		session->ring      = lws_ring_create(sizeof(struct msg), RING_DEPTH, __minimal_destroy_message);
+		session->frag_ring = lws_ring_create(sizeof(struct msg), RING_DEPTH, __minimal_destroy_message);
+		if (!session->ring || !session->frag_ring) {
+			if (session->ring)
+				lws_ring_destroy(session->ring);
+			if (session->frag_ring)
+				lws_ring_destroy(session->ring);
 			return 1;
-		session->tail = 0;
+		}
+		session->tail      = 0;
+		session->frag_tail = 0;
 		break;
 
 	case LWS_CALLBACK_SERVER_WRITEABLE:
-
-		lwsl_user("LWS_CALLBACK_SERVER_WRITEABLE\n");
+//		lwsl_user("LWS_CALLBACK_SERVER_WRITEABLE\n");
 
 		if (session->write_consume_pending) {
 			/* perform the deferred fifo consume */
@@ -125,24 +117,20 @@ static int callback_minimal_server_echo(
 
 		request = lws_ring_get_element(session->ring, &session->tail);
 		if (!request) {
-			lwsl_user(" (nothing in ring)\n");
+//			lwsl_user(" (nothing in ring)\n");
 			break;
 		}
-
 		flags = lws_write_ws_flags(
 			request->binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT,
 			request->first, request->final);
-
-		/* notice we allowed for LWS_PRE in the payload already */
-		m = lws_write(wsi, ((unsigned char *)request->payload) +
-			LWS_PRE, request->len, (enum lws_write_protocol)flags);
+		/* Send to client. Notice we allowed for LWS_PRE in the payload already */
+		m = lws_write(wsi, ((unsigned char *)request->payload) + LWS_PRE, request->len, (enum lws_write_protocol)flags);
 		if (m < (int)request->len) {
 			lwsl_err("ERROR %d writing to ws socket\n", m);
 			return -1;
 		}
+//		lwsl_user(" wrote %d: flags: 0x%x first: %d final %d\n", m, flags, request->first, request->final);
 
-		lwsl_user(" wrote %d: flags: 0x%x first: %d final %d\n",
-				m, flags, request->first, request->final);
 		/*
 		 * Workaround deferred deflate in pmd extension by only
 		 * consuming the fifo entry when we are certain it has been
@@ -151,7 +139,7 @@ static int callback_minimal_server_echo(
 		 */
 		session->write_consume_pending = 1;
 		lws_callback_on_writable(wsi);
-
+		/* Session ring has recovered room. turn off flow control. */
 		if (session->flow_controlled &&
 		    (int)lws_ring_get_count_free_elements(session->ring) > RING_DEPTH - 5) {
 			lws_rx_flow_control(wsi, 1);
@@ -164,75 +152,75 @@ static int callback_minimal_server_echo(
 		break;
 
 	case LWS_CALLBACK_RECEIVE:
-
-		lwsl_user("LWS_CALLBACK_RECEIVE: %4d (rpp %5d, first %d, "
-			  "last %d, bin %d, msglen %d (+ %d = %d))\n",
-			  (int)len, (int)lws_remaining_packet_payload(wsi),
-			  lws_is_first_fragment(wsi),
-			  lws_is_final_fragment(wsi),
-			  lws_frame_is_binary(wsi), session->msglen, (int)len,
-			  (int)session->msglen + (int)len);
-
-		if (len) {
-			;
-			// puts((const char *)in);
-			// lwsl_hexdump_notice(in, len);
-		}
-
-		/* fs-ws-signal */
-		struct fs_ws_dsp_request s_request = fs_ws_dsp_parse_request(in, len);
-		struct fs_ws_dsp_response s_response = fs_ws_dsp_process(s_request);
-		len = fs_ws_dsp_get_response_size(s_response);
-		char *stream = fs_ws_dsp_serialize_response(s_response);
-		/* -- */
-
-		response.first = (char)lws_is_first_fragment(wsi);
-		response.final = (char)lws_is_final_fragment(wsi);
-		response.binary = (char)lws_frame_is_binary(wsi);
-		n = (int)lws_ring_get_count_free_elements(session->ring);
-		if (!n) {
-			lwsl_user("dropping!\n");
-			break;
-		}
-
-		if (response.final)
+//		lwsl_user("LWS_CALLBACK_RECEIVE\n");
+		/* If final fragment then concat all saved fragments and process message, otherwise add fragment to ring. */
+    	if (lws_is_final_fragment(wsi)) {
+			/* Compile contents of fragment ring into single array */
+			char *message = malloc(session->msglen + len);
+			char *dest = message;
+			struct msg *compile_frag;
+			compile_frag = (struct msg *) lws_ring_get_element(session->frag_ring, &session->frag_tail);
+			while (compile_frag) {
+				memcpy(dest, compile_frag->payload, compile_frag->len);
+				dest += compile_frag->len;
+				lws_ring_consume_single_tail(session->frag_ring, &session->frag_tail, 1);
+				compile_frag = (struct msg *) lws_ring_get_element(session->frag_ring, &session->frag_tail);
+			}
+			memcpy(dest, in, len);
+			struct fs_ws_dsp_request s_request = fs_ws_dsp_parse_request(message, session->msglen + len);
+			struct fs_ws_dsp_response s_response = fs_ws_dsp_process(s_request);
+			uint32_t response_len = fs_ws_dsp_get_response_size(s_response);
+			char *response_payload = fs_ws_dsp_serialize_response(s_response);
+			/* APPEND TO RING */
+			fragment.first   = 1;
+			fragment.final   = 1;
+			fragment.binary  = 1;
+			fragment.len     = response_len;
+			fragment.payload = malloc(LWS_PRE + response_len);
+			memcpy(fragment.payload + LWS_PRE, response_payload, response_len);
+			if (!lws_ring_insert(session->ring, &fragment, 1)) {
+				fprintf(stderr, "Response ring is full!\n");
+				__minimal_destroy_message(&fragment);
+			}
+			free(message);
+			fs_ws_dsp_free_response(s_response);
+			fs_ws_dsp_free_request(s_request);
+			lws_callback_on_writable(wsi);
 			session->msglen = 0;
-		else
+	    } else {
+			/* Discard this fragment if we are out of room. */
+			ring_capacity = (int)lws_ring_get_count_free_elements(session->frag_ring);
+			if (!ring_capacity) {
+				lwsl_user("dropping!\n");
+				break;
+			}
+			fragment.first   = (char)lws_is_first_fragment(wsi);
+			fragment.final   = (char)lws_is_final_fragment(wsi);
+			fragment.binary  = (char)lws_frame_is_binary(wsi);
+			fragment.len     = len;
+			fragment.payload = malloc(len);
+			if (!fragment.payload) {
+				lwsl_user("OOM: dropping\n");
+				break;
+			}
+			memcpy((char *)fragment.payload, in, len);
+			if (!lws_ring_insert(session->frag_ring, &fragment, 1)) {
+				__minimal_destroy_message(&fragment);
+				lwsl_user("dropping!\n");
+				break;
+			}
+			/* Ring is almost full. Switch on flow control. */
+			if (ring_capacity < 3 && !session->flow_controlled) {
+				session->flow_controlled = 1;
+				lws_rx_flow_control(wsi, 0);
+			}
 			session->msglen += (uint32_t)len;
-
-		response.len = (uint32_t)len;
-		/* notice we over-allocate by LWS_PRE */
-		response.payload = malloc(LWS_PRE + len);
-		if (!response.payload) {
-			lwsl_user("OOM: dropping\n");
-			break;
-		}
-
-		memcpy((char *)response.payload + LWS_PRE, stream, len);
-		if (!lws_ring_insert(session->ring, &response, 1)) {
-			__minimal_destroy_message(&response);
-			lwsl_user("dropping!\n");
-			break;
-		}
-
-		/* fs_ws_signal */
-		free(stream);
-		fs_ws_dsp_free_response(s_response);
-		fs_ws_dsp_free_request(s_request);
-		/* -- */
-
-		lws_callback_on_writable(wsi);
-
-		if (n < 3 && !session->flow_controlled) {
-			session->flow_controlled = 1;
-			lws_rx_flow_control(wsi, 0);
 		}
 		break;
 
 	case LWS_CALLBACK_CLOSED:
 		lwsl_user("LWS_CALLBACK_CLOSED\n");
 		lws_ring_destroy(session->ring);
-
 		if (*vhost->options & 1) {
 			if (!*vhost->interrupted)
 				*vhost->interrupted = 1 + session->completed;
@@ -250,8 +238,8 @@ static int callback_minimal_server_echo(
 #define LWS_PLUGIN_PROTOCOL_MINIMAL_SERVER_ECHO \
 	{ \
 		"lws-minimal-server-echo", \
-		callback_minimal_server_echo, \
-		sizeof(struct per_session_data__minimal_server_echo), \
+		callback_dsp, \
+		sizeof(struct session_data), \
 		1024, \
 		0, NULL, 0 \
 	}

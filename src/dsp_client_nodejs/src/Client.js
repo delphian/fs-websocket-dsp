@@ -30,22 +30,27 @@ class Client {
         ((wsMessage) => {
             this.ws.onmessage = (e) => {
                 if (e.target._binaryType == 'nodebuffer') {
-                    // Really?
-                    let data_len = (new Uint32Array([(e.data.slice(5, 9)).readInt32LE()]))[0];
-                    let container = {
-                        "_version": e.data[0],
-                        "id": (new Uint32Array([(e.data.slice(1, 5)).readInt32LE()]))[0],
-                        "data_len": data_len,
-                        "data": e.data.slice(9, 9 + data_len)
-                    }
-                    if (wsMessage.messages[container.id]) {
-                        if (wsMessage.messages[container.id].debug)
-                            console.debug(`receiving ${container.id}:`, container);
-                        wsMessage.messages[container.id].callback(container);
-                        delete wsMessage.messages[container.id];
-                    } else {
-                        console.error('Unsolicited message from server');
-                        console.error("receiving: ", container);
+                    try {
+                        // Really?
+                        let data_len = (new Uint32Array([(e.data.slice(5, 9)).readInt32LE()]))[0];
+                        let container = {
+                            "_version": e.data[0],
+                            "id": (new Uint32Array([(e.data.slice(1, 5)).readInt32LE()]))[0],
+                            "data_len": data_len,
+                            "data": e.data.slice(9, 9 + data_len)
+                        }
+                        if (wsMessage.messages[container.id]) {
+                            if (wsMessage.messages[container.id].debug)
+                                console.debug(`receiving ${container.id}:`, container);
+                            wsMessage.messages[container.id].callback(container);
+                            delete wsMessage.messages[container.id];
+                        } else {
+                            console.error('Unsolicited message from server');
+                            console.error("receiving: ", container);
+                        }
+                    } catch (error) {
+                        console.error("Malformed message from server");
+                        console.error(e.data);
                     }
                 } else {
                     let container = JSON.parse(e.data);
@@ -89,6 +94,7 @@ class Client {
      * Send a message and register for response.
      * @param {Object}     args          - Generic argument object.
      * @param {Uint8Array} args.message  - Message to send.
+     * @param {Object}     args.options  - (Optional) Options to pass into websocket send.
      * @param {function}   args.callback - Execute callback when response is recieved.
      */
      sendBinary(args) {
@@ -116,22 +122,23 @@ class Client {
             msg.set(msg_data,    ptr += msg_len.byteLength);
         if (args.debug)
             console.debug(`sending ${id}:`, msg);    
-        this.ws.send(msg);
+        this.ws.send(msg, args.options);
     }
     /**
      * Send test message to server which will be echoed back.
      * @param {TypedArray} data - Test data to send
      * @returns timer for canceling interval.
      */
-    testBinary(data) {
+    testBinary(data, options) {
         let timer = setInterval(() => {
             this.sendBinary({
                 "message": data,
+                "options": options,
                 "callback": (container) => { },
                 "error": (error) => { },
                 "debug": true
             });
-        }, 10000);
+        }, 15000);
         return timer;
     }
     /**
