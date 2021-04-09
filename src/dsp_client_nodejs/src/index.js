@@ -2,4 +2,6 @@
  * Dynamic interface
  */
 import { Client } from './Client.js';
-export { Client }
+import { COMMAND } from './Commands.js';
+
+export { Client, COMMAND }

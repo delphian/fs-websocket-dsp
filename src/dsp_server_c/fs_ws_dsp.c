@@ -6,17 +6,13 @@
 #include <complex.h>
 #include <unistd.h>
 #include <liquid/liquid.h>
+#include "fs_ws_dsp_echo.c"
 
 struct fs_ws_dsp_response fs_ws_dsp_process(struct fs_ws_dsp_request request) {
     struct fs_ws_dsp_response response;
     memset(&response, 0, sizeof(struct fs_ws_dsp_response));
-    response._version = 1;
-    response.id       = request.id;
-    response.data_len = request.data_len;
-    if (response.data_len > 0) {
-        response.data = malloc(response.data_len);
-        memcpy(response.data, request.data, request.data_len);
-    }
+    if ((uint8_t)request.command[0] == FS_WS_DSP_COMMAND_ECHO)
+        fs_ws_dsp_process_echo(request, &response);
     return response;
 }
 void fs_ws_dsp_free_response(struct fs_ws_dsp_response response) {
@@ -30,10 +26,11 @@ struct fs_ws_dsp_request fs_ws_dsp_parse_request(char *data, size_t data_len) {
     memset(&request, 0, sizeof(struct fs_ws_dsp_request));
     request._version = (uint8_t)data[0];
     request.id       = *((uint32_t *)(data + 1));
-    request.data_len = *((uint32_t *)(data + 5));
+    memcpy(&request.command, data + 5, sizeof(request.command));
+    request.data_len = *((uint32_t *)(data + 9));
     if (request.data_len > 0) {
         request.data = malloc(request.data_len);
-        memcpy(request.data, data + 9, request.data_len);
+        memcpy(request.data, data + 13, request.data_len);
     }
     return request;
 }

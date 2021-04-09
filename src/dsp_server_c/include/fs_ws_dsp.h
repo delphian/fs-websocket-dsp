@@ -4,12 +4,18 @@
  */
 
 /**
+ * Processing command requests type definitions.
+ */
+const static uint8_t FS_WS_DSP_COMMAND_ECHO = 1;
+
+/**
  * @brief Signal processing request container.
  * @details This container will be created from parsing the client request.
  */
 struct fs_ws_dsp_request {
     uint8_t _version;   ///< Version of the request format.
     uint32_t id;        ///< Each request must have a unique tracking identifier.
+    char command[4];    ///< Requested processes.
     size_t data_len;    ///< Byte length of data to be processed.
     void *data;         ///< Data specific to the processing request.
 };
