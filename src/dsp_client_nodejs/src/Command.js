@@ -53,8 +53,8 @@ class Command {
      * @returns Uint8Array - Processing command byte stream.
      */
     serialize() {
-        let type      = new Uint32Array([this.type]);
-        let paramsLen = new Uint32Array([this.paramsLen]);
+        let type      = new Uint8Array((new Uint32Array([this.type])).buffer);
+        let paramsLen = new Uint8Array((new Uint32Array([this.paramsLen])).buffer);
         let stream = new Uint8Array(
             type.byteLength +
             paramsLen.byteLength +

@@ -9,6 +9,8 @@ struct fs_ws_dsp_message fs_ws_dsp_process(struct fs_ws_dsp_message request) {
     struct fs_ws_dsp_message response;
     memset(&response, 0, sizeof(struct fs_ws_dsp_message));
 
+    response.id = request.id;
+fprintf(stderr, "\nrequest id: %u\n", request.id);
     // ROUTE REQUEST
 
     return response;

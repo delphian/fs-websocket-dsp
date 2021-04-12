@@ -69,8 +69,8 @@ class Message {
     serialize() {
         // Calculate byte array size.
         let version       = new Uint8Array([this.version]);
-        let id            = new Uint32Array([this.id]);
-        let commandsCount = new Uint32Array([this.commands.length]);
+        let id            = new Uint8Array((new Uint32Array([this.id])).buffer);
+        let commandsCount = new Uint8Array((new Uint32Array([this.commands.length])).buffer);
         let commands      = new Uint8Array();
         let dst = 0;
         this.commands.forEach((command) => {
