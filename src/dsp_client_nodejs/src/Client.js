@@ -1,5 +1,6 @@
 import atob from 'atob';
-import { COMMAND } from './Commands.js';
+import { Command, COMMAND_FN } from './Command.js';
+import { Message } from './Message.js';
 
 const _CLASS = '@FaintSignals/ws-dsp-client/Client';
 
@@ -94,16 +95,14 @@ class Client {
     /**
      * Send a message and register for response.
      * @param {Object}     args          - Generic argument object.
-     * @param {Uint8Array} args.command  - 4 byte array command block.
-     * @param {Uint8Array} args.message  - Message to send.
+     * @param {Message}    args.message  - @FaintSignals/dsp-client-nodejs/Message message to send.
      * @param {Object}     args.options  - (Optional) Options to pass into websocket send.
      * @param {function}   args.callback - Execute callback when response is recieved.
+     * @param {bool}       args.debug    - Echo debugging information.
      */
      sendBinary(args) {
         if (!args)
             throw `${_CLASS}: Parameter object is required`;
-        if (!args.command)
-            throw `${_CLASS}: Parameter is required: 'command'`;
         if (!args.message)
             throw `${_CLASS}: Parameter is required: 'message'`;
         if (!args.callback)
@@ -114,21 +113,12 @@ class Client {
             "callback": args.callback,
             "debug": true
         };
-        let msg_version  = new Uint8Array([1]);
-        let msg_id       = new Uint8Array((new Uint32Array([id])).buffer);
-        let msg_command  = new Uint8Array(args.command);
-        let msg_data_len = new Uint8Array((new Uint32Array([args.message.byteLength])).buffer);
-        let msg_data     = new Uint8Array(args.message.buffer);
-        let ptr          = 0;
-        let msg = new Uint8Array(msg_version.byteLength + msg_id.byteLength + msg_command.byteLength + msg_data_len.byteLength + msg_data.byteLength);
-            msg.set(msg_version,  ptr);
-            msg.set(msg_id,       ptr += msg_version.byteLength);
-            msg.set(msg_command,  ptr += msg_id.byteLength);
-            msg.set(msg_data_len, ptr += msg_command.byteLength);
-            msg.set(msg_data,     ptr += msg_data_len.byteLength);
         if (args.debug)
-            console.debug(`sending ${id}:`, msg);    
-        this.ws.send(msg, args.options);
+            console.debug(`sending ${id}:`, args.message);
+        let serialized = args.message.serialize();
+        if (args.debug)
+            console.debug('binary: ', serialized);
+        this.ws.send(serialized, args.options);
     }
     /**
      * Send test message to server which will be echoed back.
@@ -136,10 +126,18 @@ class Client {
      * @returns timer for canceling interval.
      */
     testBinary(data, options) {
+        let idMax = 65535;
+        let message = new Message({ 
+            "version": 1, 
+            "id": Math.floor(Math.random() * idMax),
+            "commands": [
+                new Command({ "type": COMMAND_FN.ECHO, "paramsLen": 0 })
+            ],
+            "data": new Uint8Array(data.buffer)
+        });
         let timer = setInterval(() => {
             this.sendBinary({
-                "command": new Uint8Array([COMMAND.ECHO, 0, 0, 0]),
-                "message": data,
+                "message": message,
                 "options": options,
                 "callback": (container) => { },
                 "error": (error) => { },

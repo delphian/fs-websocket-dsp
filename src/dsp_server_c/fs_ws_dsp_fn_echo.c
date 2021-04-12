@@ -1,5 +1,5 @@
 /**
- * @file fs_ws_dsp_echo.c
+ * @file fs_ws_dsp_fn_echo.c
  * @brief Echo payload back at client.
  */
 

@@ -2,6 +2,7 @@
  * Dynamic interface
  */
 import { Client } from './Client.js';
-import { COMMAND } from './Commands.js';
+import { Command, COMMAND_FN } from './Command.js';
+import { Message } from './Message.js';
 
-export { Client, COMMAND }
+export { Client, Command, COMMAND_FN, Message }

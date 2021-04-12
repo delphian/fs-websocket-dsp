@@ -1,5 +1,4 @@
 
-import { Client } from './src/index.js';
-import { COMMAND } from './src/index.js';
+import { Client, Message, Command, COMMAND_FN } from './src/index.js';
 
-export { Client, COMMAND };
+export { Client, Message, Command, COMMAND_FN };
