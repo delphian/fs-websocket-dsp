@@ -12,6 +12,8 @@
 
 #include <string.h>
 #include "include/fs_ws_dsp.h"
+#include "fs_ws_dsp_command.c"
+#include "fs_ws_dsp_message.c"
 #include "fs_ws_dsp.c"
 
 #define RING_DEPTH 4096
@@ -167,10 +169,10 @@ static int callback_dsp(
 				compile_frag = (struct msg *) lws_ring_get_element(session->frag_ring, &session->frag_tail);
 			}
 			memcpy(dest, in, len);
-			struct fs_ws_dsp_request s_request = fs_ws_dsp_parse_request(message, session->msglen + len);
-			struct fs_ws_dsp_response s_response = fs_ws_dsp_process(s_request);
-			uint32_t response_len = fs_ws_dsp_get_response_size(s_response);
-			char *response_payload = fs_ws_dsp_serialize_response(s_response);
+			struct fs_ws_dsp_message s_request = fs_ws_dsp_message_parse(message, session->msglen + len);
+			struct fs_ws_dsp_message s_response = fs_ws_dsp_process(s_request);
+			uint32_t response_len = fs_ws_dsp_message_serialize_size(s_response);
+			char *response_payload = fs_ws_dsp_message_serialize(s_response);
 			/* APPEND TO RING */
 			fragment.first   = 1;
 			fragment.final   = 1;
@@ -183,8 +185,8 @@ static int callback_dsp(
 				__minimal_destroy_message(&fragment);
 			}
 			free(message);
-			fs_ws_dsp_free_response(s_response);
-			fs_ws_dsp_free_request(s_request);
+			fs_ws_dsp_message_free(s_response);
+			fs_ws_dsp_message_free(s_request);
 			lws_callback_on_writable(wsi);
 			session->msglen = 0;
 	    } else {
