@@ -107,14 +107,13 @@ class Client {
             throw `${_CLASS}: Parameter is required: 'message'`;
         if (!args.callback)
             throw `${_CLASS}: Parameter is required: 'callback'`;
-        let id = Math.floor(Math.random() * 4294967295);
-        this.messages[id] = {
+        this.messages[args.message.id] = {
             "type": "binary",
             "callback": args.callback,
             "debug": true
         };
         if (args.debug)
-            console.debug(`sending ${id}:`, args.message);
+            console.debug(`sending ${args.message.id}:`, args.message);
         let serialized = args.message.serialize();
         if (args.debug)
             console.debug('binary: ', serialized);
@@ -126,16 +125,17 @@ class Client {
      * @returns timer for canceling interval.
      */
     testBinary(data, options) {
+        //let idMax = 4294967295;
         let idMax = 65535;
-        let message = new Message({ 
-            "version": 1, 
-            "id": Math.floor(Math.random() * idMax),
-            "commands": [
-                new Command({ "type": COMMAND_FN.ECHO, "paramsLen": 0 })
-            ],
-            "data": new Uint8Array(data.buffer)
-        });
         let timer = setInterval(() => {
+            let message = new Message({ 
+                "version": 1, 
+                "id": Math.floor(Math.random() * idMax),
+                "commands": [
+                    new Command({ "type": COMMAND_FN.ECHO, "paramsLen": 0 })
+                ],
+                "data": new Uint8Array(data.buffer)
+            });
             this.sendBinary({
                 "message": message,
                 "options": options,
@@ -143,7 +143,7 @@ class Client {
                 "error": (error) => { },
                 "debug": true
             });
-        }, 15000);
+        }, 1000);
         return timer;
     }
     /**
