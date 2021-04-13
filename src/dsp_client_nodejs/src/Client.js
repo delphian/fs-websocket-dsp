@@ -121,10 +121,13 @@ class Client {
     }
     /**
      * Send test message to server which will be echoed back.
-     * @param {TypedArray} data - Test data to send
+     * @param {TypedArray} data        - Test data to send
+     * @param {Object}     options     - (Optional) Options to pass into websocket.
+     * @param {number}     miliseconds - (Optional) Defaults to 1000. Repeat at interval.
      * @returns timer for canceling interval.
      */
-    testBinary(data, options) {
+    testBinary(data, options, miliseconds) {
+        miliseconds = (miliseconds) ? miliseconds : 1000;
         //let idMax = 4294967295;
         let idMax = 65535;
         let timer = setInterval(() => {
@@ -143,7 +146,7 @@ class Client {
                 "error": (error) => { },
                 "debug": true
             });
-        }, 1000);
+        }, miliseconds);
         return timer;
     }
     /**

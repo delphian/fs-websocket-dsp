@@ -8,10 +8,16 @@
 struct fs_ws_dsp_message fs_ws_dsp_process(struct fs_ws_dsp_message request) {
     struct fs_ws_dsp_message response;
     memset(&response, 0, sizeof(struct fs_ws_dsp_message));
-
     response.id = request.id;
-fprintf(stderr, "\nrequest id: %u\n", request.id);
-    // ROUTE REQUEST
+    
+    if (request.commands_count > 0) {
+        struct fs_ws_dsp_command **dst = request.commands;
+        for (int i = 0; i < request.commands_count; i++) {
+            struct fs_ws_dsp_command *command = *dst++;            
+            if (command->type == FS_WS_DSP_CMD_ECHO)
+                fs_ws_dsp_process_echo(request, &response);
+        }
+    }
 
     return response;
 }

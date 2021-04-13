@@ -14,9 +14,10 @@
 #include "include/fs_ws_dsp.h"
 #include "fs_ws_dsp_command.c"
 #include "fs_ws_dsp_message.c"
+#include "fs_ws_dsp_cmd_echo.c"
 #include "fs_ws_dsp.c"
 
-#define RING_DEPTH 4096
+#define RING_DEPTH 1024 * 32
 
 /* one of these created for each message fragment */
 struct msg {

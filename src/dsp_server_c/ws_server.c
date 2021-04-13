@@ -37,13 +37,13 @@ static const struct lws_protocol_vhost_options pvo = {
 	""				/* ignored */
 };
 static const struct lws_extension extensions[] = {
-	{
-		"permessage-deflate",
-		lws_extension_callback_pm_deflate,
-		"permessage-deflate"
-		 "; client_no_context_takeover"
-		 "; client_max_window_bits"
-	},
+	// {
+	// 	"permessage-deflate",
+	// 	lws_extension_callback_pm_deflate,
+	// 	"permessage-deflate"
+	// 	 "; client_no_context_takeover"
+	// 	 "; client_max_window_bits"
+	// },
 	{ NULL, NULL, NULL /* terminator */ }
 };
 
