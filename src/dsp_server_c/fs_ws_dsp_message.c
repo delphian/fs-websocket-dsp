@@ -7,11 +7,14 @@ struct fs_ws_dsp_message fs_ws_dsp_message_parse(char *data, size_t data_len) {
     struct fs_ws_dsp_message message;
     memset(&message, 0, sizeof(struct fs_ws_dsp_message));
     char *src = data;
+
+fs_ws_dsp_debug(data, 64);
+
     message._version       = *((uint8_t *)src);     src += 1;
     message.id             = *((uint32_t *)src);    src += 4;
     message.commands_count = *((uint32_t *)src);    src += 4;
     if (message.commands_count > 0) {
-        message.commands = malloc(sizeof(struct fs_ws_dsp_command *) * message.commands_count);
+        message.commands = malloc(sizeof(struct fs_ws_dsp_command *) *message.commands_count);
         struct fs_ws_dsp_command **dst = message.commands;
         for (int i = 0; i < message.commands_count; i++) {
             struct fs_ws_dsp_command *command = fs_ws_dsp_command_parse(src);
@@ -20,6 +23,7 @@ struct fs_ws_dsp_message fs_ws_dsp_message_parse(char *data, size_t data_len) {
         }
     }
     message.data_len = *((uint32_t *)src);          src += 4;
+fprintf(stderr, "\nData len size: %u\n", message.data_len);
     if (message.data_len > 0) {
         message.data = malloc(message.data_len);
         memcpy(message.data, src, message.data_len);

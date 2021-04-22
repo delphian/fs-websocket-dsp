@@ -3,7 +3,7 @@
  * @brief Echo payload back at client.
  */
 
-void fs_ws_dsp_process_echo(struct fs_ws_dsp_message request, struct fs_ws_dsp_message *response) {
+void fs_ws_dsp_cmd_echo(struct fs_ws_dsp_command *command, struct fs_ws_dsp_message request, struct fs_ws_dsp_message *response) {
     response->_version       = 1;
     response->id             = request.id;
     response->data_len       = request.data_len;

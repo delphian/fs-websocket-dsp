@@ -172,6 +172,7 @@ class Client {
      * @param {Object}     args            - Generic argument object.
      * @param {TypedArray} args.samples    - Interleaved IQ data. Can be 8, 16, or 32 in sample size.
      * @param {number}     args.sampleRate - Sample rate in Hz.
+     * @param {number}     args.sampleSize - Byte size of each I sample.
      */
     async fftIQ(args) {
         if (!args)
@@ -182,21 +183,22 @@ class Client {
             throw `${_CLASS}: Parameter is required: 'sampleRate'`;
         let promise = new Promise((resolve, reject) => {
             let sampleSize = args.samples.byteLength / args.samples.length;
-            // Construct binary message.
-            let msgFunction   = new Uint8Array((new Uint32Array([1])).buffer);
+            let idMax = 65535;
             let msgSampleRate = new Uint8Array((new Uint32Array([args.sampleRate])).buffer);
             let msgSampleSize = new Uint8Array((new Uint32Array([sampleSize])).buffer);
-            let msgSamples    = new Uint8Array(args.samples.buffer);
-            let msgSamplesLen = new Uint8Array((new Uint32Array([args.samples.byteLength])).buffer);
-            let ptr = 0;
-            let msg = new Uint8Array(msgFunction.byteLength + msgSampleRate.byteLength + msgSampleSize.byteLength + msgSamples.byteLength + msgSamplesLen.byteLength);
-                msg.set(msgFunction,   ptr);
-                msg.set(msgSampleRate, ptr += msgFunction.byteLength);
-                msg.set(msgSampleSize, ptr += msgSampleRate.byteLength);
-                msg.set(msgSamplesLen, ptr += msgSampleSize.byteLength);
-                msg.set(msgSamples,    ptr += msgSamplesLen.byteLength);
-            this.sendBinary({ "message": msg, "callback": (container) => {
-console.log("ok", container);
+            let params = new Uint8Array(msgSampleRate.byteLength + msgSampleSize.byteLength);
+                params.set(msgSampleRate, 0);
+                params.set(msgSampleSize, 4);
+            let message = new Message({ 
+                "version": 1, 
+                "id": Math.floor(Math.random() * idMax),
+                "commands": [
+                    new Command({ "type": COMMAND_FN.FFT, "paramsLen": params.byteLength, "params": params })
+                ],
+                "data": new Uint8Array(args.samples.buffer)
+            });
+            // Construct binary message.
+            this.sendBinary({ "message": message, "callback": (container) => {
                 resolve(container);
             }, "error": (error) => { reject(error); }});    
         });

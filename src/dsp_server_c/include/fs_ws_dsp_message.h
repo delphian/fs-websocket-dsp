@@ -12,7 +12,7 @@ struct fs_ws_dsp_message {
     uint32_t id;                         ///< Each request must have a unique tracking identifier.
     uint32_t commands_count;             ///< Number of commands.
     struct fs_ws_dsp_command **commands; ///< Pointer to array of command pointers.
-    size_t data_len;                     ///< Byte length of data to be processed.
+    uint32_t data_len;                   ///< Byte length of data to be processed.
     void *data;                          ///< Data specific to the processing request.
 };
 

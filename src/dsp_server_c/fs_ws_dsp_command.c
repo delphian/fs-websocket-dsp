@@ -23,8 +23,8 @@ struct fs_ws_dsp_command* fs_ws_dsp_command_free(struct fs_ws_dsp_command *comma
 char* fs_ws_dsp_command_serialize(struct fs_ws_dsp_command *command) {
     char *stream = malloc(fs_ws_dsp_command_serialize_size(command));
     char *dst = stream;
-    memcpy(dst, &command->type,       sizeof command->type);        dst += sizeof(command->type);
-    memcpy(dst, &command->params_len, sizeof command->params_len);  dst += sizeof(command->params_len);
+    memcpy(dst, &command->type,       4);                   dst += 4;
+    memcpy(dst, &command->params_len, 4);                   dst += 4;
     memcpy(dst, command->params,      command->params_len);
     return stream;
 }

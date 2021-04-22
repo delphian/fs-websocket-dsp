@@ -80,7 +80,7 @@ class Message {
             newCmds.set(cmdStream, commands.byteLength);
             commands = newCmds;
         });
-        let dataLen = new Uint32Array([(this.data) ? this.data.byteLength : 0]);
+        let dataLen = new Uint8Array((new Uint32Array([(this.data) ? this.data.byteLength : 0])).buffer);
         // Compile byte array size.
         let stream = new Uint8Array(
             version.byteLength +

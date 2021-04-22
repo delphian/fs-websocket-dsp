@@ -12,9 +12,6 @@
 
 #include <string.h>
 #include "include/fs_ws_dsp.h"
-#include "fs_ws_dsp_command.c"
-#include "fs_ws_dsp_message.c"
-#include "fs_ws_dsp_cmd_echo.c"
 #include "fs_ws_dsp.c"
 
 #define RING_DEPTH 1024 * 32
@@ -170,7 +167,9 @@ static int callback_dsp(
 				compile_frag = (struct msg *) lws_ring_get_element(session->frag_ring, &session->frag_tail);
 			}
 			memcpy(dest, in, len);
+fprintf(stderr, "PARSING\n");
 			struct fs_ws_dsp_message s_request = fs_ws_dsp_message_parse(message, session->msglen + len);
+fprintf(stderr, "PROCESSING\n");
 			struct fs_ws_dsp_message s_response = fs_ws_dsp_process(s_request);
 			uint32_t response_len = fs_ws_dsp_message_serialize_size(s_response);
 			char *response_payload = fs_ws_dsp_message_serialize(s_response);

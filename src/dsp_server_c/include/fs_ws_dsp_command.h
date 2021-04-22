@@ -7,14 +7,15 @@
  * Processing command type definitions.
  */
 const static uint8_t FS_WS_DSP_CMD_ECHO = 1;
+const static uint8_t FS_WS_DSP_CMD_FFT = 2;
 
 /**
  * @brief Signal processing to transform data with.
  */  
 struct fs_ws_dsp_command {
-    uint32_t type;     ///< Type of processing request.
-    size_t params_len; ///< Length in bytes of parameters.
-    char *params;      ///< Parameter data.
+    uint32_t type;       ///< Type of processing request.
+    uint32_t params_len; ///< Length in bytes of parameters.
+    char *params;        ///< Parameter data.
 };
 
 /**
