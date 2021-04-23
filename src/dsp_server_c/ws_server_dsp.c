@@ -167,12 +167,12 @@ static int callback_dsp(
 				compile_frag = (struct msg *) lws_ring_get_element(session->frag_ring, &session->frag_tail);
 			}
 			memcpy(dest, in, len);
-fprintf(stderr, "PARSING\n");
+
 			struct fs_ws_dsp_message s_request = fs_ws_dsp_message_parse(message, session->msglen + len);
-fprintf(stderr, "PROCESSING\n");
 			struct fs_ws_dsp_message s_response = fs_ws_dsp_process(s_request);
 			uint32_t response_len = fs_ws_dsp_message_serialize_size(s_response);
 			char *response_payload = fs_ws_dsp_message_serialize(s_response);
+
 			/* APPEND TO RING */
 			fragment.first   = 1;
 			fragment.final   = 1;
@@ -185,8 +185,10 @@ fprintf(stderr, "PROCESSING\n");
 				__minimal_destroy_message(&fragment);
 			}
 			free(message);
+
 			fs_ws_dsp_message_free(s_response);
 			fs_ws_dsp_message_free(s_request);
+
 			lws_callback_on_writable(wsi);
 			session->msglen = 0;
 	    } else {

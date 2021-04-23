@@ -110,7 +110,7 @@ class Client {
         this.messages[args.message.id] = {
             "type": "binary",
             "callback": args.callback,
-            "debug": true
+            "debug": args.debug
         };
         if (args.debug)
             console.debug(`sending ${args.message.id}:`, args.message);
@@ -198,7 +198,7 @@ class Client {
                 "data": new Uint8Array(args.samples.buffer)
             });
             // Construct binary message.
-            this.sendBinary({ "message": message, "callback": (container) => {
+            this.sendBinary({ "debug": false, "message": message, "callback": (container) => {
                 resolve(container);
             }, "error": (error) => { reject(error); }});    
         });
