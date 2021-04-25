@@ -9,6 +9,7 @@
 #include "fs_ws_dsp_message.c"
 #include "fs_ws_dsp_cmd_echo.c"
 #include "fs_ws_dsp_cmd_fft.c"
+#include "fs_ws_dsp_cmd_firfilt.c"
 
 struct fs_ws_dsp_message fs_ws_dsp_process(struct fs_ws_dsp_message request) {
     struct fs_ws_dsp_message response;
@@ -22,6 +23,8 @@ struct fs_ws_dsp_message fs_ws_dsp_process(struct fs_ws_dsp_message request) {
                 fs_ws_dsp_cmd_echo(command, request, &response);
             if (command->type == FS_WS_DSP_CMD_FFT)
                 fs_ws_dsp_cmd_fft(command, request, &response);
+            if (command->type == FS_WS_DSP_CMD_FIRFILT)
+                fs_ws_dsp_cmd_firfilt(command, request, &response);
         }
     }
     return response;
@@ -36,6 +39,17 @@ void fs_ws_dsp_debug(char *data, size_t data_len) {
             fprintf(stderr, "\n");
     }
     return;
+}
+
+float complex *fs_ws_dsp_samples_8to32(char complex *samples, int n_samples) {
+    float complex *x = (float complex*) malloc(n_samples * sizeof(float complex));
+    int i;
+    char complex *src = samples;
+    float complex *dst = x;
+    for (i = 0; i < n_samples; i++) {
+        *dst++ = (float complex)*src++; 
+    }
+    return x;
 }
 
 int interpolator() {

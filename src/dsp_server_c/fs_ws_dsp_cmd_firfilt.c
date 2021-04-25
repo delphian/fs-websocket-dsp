@@ -1,14 +1,13 @@
 /**
- * @file fs_ws_dsp_cmd_fft.c
- * @brief Fast fourier transform.
+ * @file fs_ws_dsp_cmd_firfilt.c
+ * @brief FIR Filter.
  */
 
-void fs_ws_dsp_cmd_fft(struct fs_ws_dsp_command *command, struct fs_ws_dsp_message request, struct fs_ws_dsp_message *response) {
+void fs_ws_dsp_cmd_firfilt(struct fs_ws_dsp_command *command, struct fs_ws_dsp_message request, struct fs_ws_dsp_message *response) {
     uint32_t sample_rate = *((uint32_t *)command->params);
     uint32_t sample_size = *((uint32_t *)(command->params + 4));
     float complex *x;
     unsigned int n_len;
-    int flags = 0;        // FFT flags (typically ignored)
 
     // Calculate number of samples.
     if (response->data == NULL) {
@@ -18,7 +17,15 @@ void fs_ws_dsp_cmd_fft(struct fs_ws_dsp_command *command, struct fs_ws_dsp_messa
         n_len = response->data_len / sizeof(float complex);
     }
 
+    // Construct filter coefficients:
+    unsigned int h_len=57;      // filter length
+    float fc=0.10f;             // cutoff frequency
+    float As=60.0f;             // stop-band attenuation
+    float h[h_len];
+    liquid_firdes_kaiser(h_len, fc, As, 0, h);
+
     // create filter object, input and output samples.
+    firfilt_crcf q = firfilt_crcf_create(h, h_len);
     if (response->data == NULL) {
         x = fs_ws_dsp_samples_8to32(request.data, n_len);
     } else {
@@ -26,13 +33,16 @@ void fs_ws_dsp_cmd_fft(struct fs_ws_dsp_command *command, struct fs_ws_dsp_messa
     }
     float complex *y = (float complex *) malloc(n_len * sizeof(float complex));
 
-    // create FFT plan
-    fftplan q = fft_create_plan(n_len, x, y, LIQUID_FFT_FORWARD, flags);
-    fft_execute(q);
+    // Run signal through filter one sample at a time.
+    int i;
+    for (i = 0; i < n_len; i++) {
+        firfilt_crcf_push(q, x[i]);
+        firfilt_crcf_execute(q, &y[i]);
+    }
 
-    // destroy FFT plan and free memory arrays
-    fft_destroy_plan(q);
-    free(x); // (response->data)
+    // destroy filter object
+    firfilt_crcf_destroy(q);
+    free(x);
 
     response->_version       = 1;
     response->id             = request.id;

@@ -8,6 +8,7 @@
  */
 const static uint8_t FS_WS_DSP_CMD_ECHO = 1;
 const static uint8_t FS_WS_DSP_CMD_FFT = 2;
+const static uint8_t FS_WS_DSP_CMD_FIRFILT = 3;
 
 /**
  * @brief Signal processing to transform data with.

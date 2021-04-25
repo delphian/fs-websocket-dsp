@@ -3,7 +3,8 @@ const _CLASS = '@FaintSignals/dsp-client-nodejs/Command';
 
 const COMMAND_FN = {
     ECHO: 1,
-    FFT: 2
+    FFT: 2,
+    FIRFILT: 3
 };
 
 class Command {

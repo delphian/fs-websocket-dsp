@@ -52,6 +52,7 @@ class Client {
                         }
                     } catch (error) {
                         console.error("Malformed message from server");
+                        console.error(error);
                         console.error(e.data);
                     }
                 } else {
@@ -99,6 +100,7 @@ class Client {
      * @param {Object}     args.options  - (Optional) Options to pass into websocket send.
      * @param {function}   args.callback - Execute callback when response is recieved.
      * @param {bool}       args.debug    - Echo debugging information.
+     * @returns {ArrayBuffer}
      */
      sendBinary(args) {
         if (!args)
@@ -173,8 +175,9 @@ class Client {
      * @param {TypedArray} args.samples    - Interleaved IQ data. Can be 8, 16, or 32 in sample size.
      * @param {number}     args.sampleRate - Sample rate in Hz.
      * @param {number}     args.sampleSize - Byte size of each I sample.
+     * @return {Float32Array} - Interleaved 4 byte I and Q FFT bins.
      */
-    async fftIQ(args) {
+    async fft(args) {
         if (!args)
             throw `${_CLASS}: Parameter object is required`;
         if (!args.samples)
@@ -193,13 +196,15 @@ class Client {
                 "version": 1, 
                 "id": Math.floor(Math.random() * idMax),
                 "commands": [
+                    new Command({ "type": COMMAND_FN.FIRFILT, "paramsLen": params.byteLength, "params": params }),
                     new Command({ "type": COMMAND_FN.FFT, "paramsLen": params.byteLength, "params": params })
                 ],
                 "data": new Uint8Array(args.samples.buffer)
             });
             // Construct binary message.
-            this.sendBinary({ "debug": false, "message": message, "callback": (container) => {
-                resolve(container);
+            this.sendBinary({ "debug": false, "message": message, "callback": (message) => {
+                let float32 = new Float32Array(new Uint8Array(message.data).buffer);
+                resolve(float32);
             }, "error": (error) => { reject(error); }});    
         });
         return promise;
